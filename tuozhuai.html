@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+</head>
+
+<body>
+	<!-- <div class="father" id="father" ondragover="dragover(event)" ondrop="drop(event)">
+	    <div id="drag" draggable="true" ondragstart="drag(event)">
+	    	f;lsakdfn;sajfd;
+	    </div>
+	    <div id="drag2" draggable="true" ondragstart="drag(event)">
+	    	222222
+	    </div>
+	</div> -->
+
+	<!-- 左边元素框 -->
+	<div id="left">
+		<p draggable="true">index1</p>
+		<p draggable="true">index2</p>
+		<p draggable="true">index3</p>
+		<p draggable="true">index4</p>
+		<p draggable="true">index5</p>
+		<p draggable="true">index6</p>
+		<p draggable="true">index7</p>
+	</div>
+
+	<div id="right"></div>
+</body>
+<script>
+	// function drag(ev){
+	// 	ev.dataTransfer.setData("Text", this.id);
+	// }
+	// function dragover(ev){
+	// 	ev.preventDefault();
+	// }
+	// function drop(ev){
+	// 	ev.preventDefault();
+	//             var id = ev.dataTransfer.getData('Text');
+	//             var elem = document.getElementById(id); //当前拖动的元素
+	//             var toElem = ev.toElement.id; //放置位置
+	//             if (toElem == 'father') {
+	//                 //如果为container,元素放置在末尾
+	//                 console.log(ev);
+	//                 ev.appendChild(elem);
+	//             } else {
+	//                 //如果为container里的元素，则插入该元素之前
+	//                 this.insertBefore(elem, document.getElementById(toElem));
+	//             }
+	// }
+
+
+	var moveItem = document.getElementsByTagName('p');
+
+	for (let i = 0; i < moveItem.length; i++) {
+		//动态设置label元素id
+		moveItem[i].setAttribute('id', 'label' + i);
+		moveItem[i].ondragstart = function (ev) {
+			//dataTransfer.setData() 方法设置被拖数据的数据类型和值
+			ev.dataTransfer.setData("Text", this.id);
+		};
+	}
+	document.getElementById('left').ondragover = function (ev) {
+
+		ev.preventDefault(); //阻止向上冒泡
+
+	}
+	document.getElementById('left').ondrop = function (ev) {
+
+		ev.preventDefault();
+		var id = ev.dataTransfer.getData('Text');
+		console.log(id);
+		var elem = document.getElementById(id); //当前拖动的元素
+		console.log(elem);
+		var toElem = ev.toElement.id; //放置位置
+		console.log(toElem)
+		if (toElem == 'right') {
+			//如果为container,元素放置在末尾
+
+			this.appendChild(elem);
+		} else { //如果为container里的元素，则插入该元素之前
+			this.appendChild(elem);
+			// this.insertBefore(elem, document.getElementById(toElem));
+			console.log(this);
+		}
+	}
+</script>
+<style>
+	/*.father{
+		width: 600px;
+		height: 450px;
+		border: 1px solid #009;
+	}
+	#drag, #drag2{
+		margin: 10px;
+		float: left;
+		position: relative;
+		background: #090;
+		border: 1px solid #900;
+		width: 200px;
+		height: 150px;
+	}*/
+	#left {
+		width: 100px;
+		height: 300px;
+		background: #090;
+		float: left;
+	}
+
+	#left p {
+		background: #009;
+		margin: 2px;
+		padding: 2px;
+	}
+
+	#right {
+		width: 100px;
+		height: 300px;
+		overflow: hidden;
+		background: #900;
+	}
+</style>
+
+</html>
