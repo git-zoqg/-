@@ -1,0 +1,167 @@
+<template>
+    <div class="import_config">
+        <list_title class=" header-width-button-group padding_15 " title_name="账户列表">
+            <div class="pull_right">
+                <el-button type="primary" size="small" @click="addList" :disabled="vcOperLevel.indexOf('1')<0">添加</el-button>
+                <el-button type="primary" size="small" @click="editList" :disabled="vcOperLevel.indexOf('1')<0">编辑</el-button>
+                <!-- <el-button type="primary" size="small" @click="queryList" :disabled="vcOperLevel.indexOf('1')<0">查看</el-button> -->
+                <el-button type="primary" size="small" @click="deleteList" :disabled="vcOperLevel.indexOf('1')<0">删除</el-button>
+                <!-- 20190222 -->
+            </div>
+            <section class="table-list">
+                <el-table @selection-change="selection" :data="bankData" border max-height="680" stripe style="width: 100%"
+                    line-height="30" ref="radioTable">
+                    <!-- <el-table-column label="" width="55">
+                        <template scope="scope">
+                            <el-checkbox v-model="scope.row.checked"></el-checkbox>
+                        </template>
+                    </el-table-column> -->
+                    <el-table-column type="selection" width="50">
+                    </el-table-column>
+                    <el-table-column min-width="100" label="简称" prop="vcBankname">
+                    </el-table-column>
+                    <el-table-column label="银行账号" min-width="200" prop="vcBankacco"></el-table-column>
+                    <el-table-column min-width="100" label="账户状态">
+                        <template scope="scope">{{scope.row.cValidflag=="0"?'有效':'无效'}}</template>
+                    </el-table-column>
+                    <el-table-column min-width="180" prop="vcDesc" label="规则文件"></el-table-column>
+                    <el-table-column min-width="160" prop="vcSheetname" label="Sheet名称"></el-table-column>
+                    <el-table-column min-width="80" prop="vcManager" label="负责人"></el-table-column>
+                </el-table>
+            </section>
+        </list_title>
+        <add-import-dialog v-on:success="loadList" ref="adddialog" :showData="showData" :titleName="titleName" :isEdit="isEdit"
+            :isAdd="isAdd">
+        </add-import-dialog>
+    </div>
+</template>
+
+<script>
+    import list_title from '../../common/list-title.vue';
+    import addImportDialog from '../../common/dialog/add_import_config_dialog.vue';
+    import api from '../../../http/api'
+    export default {
+        components: {
+            list_title,
+            addImportDialog,
+            api,
+        },
+        data() {
+            return {
+                bankData: [],
+                titleName: '新增导入账户',
+                isEdit: 1,
+                isAdd: 0,
+                chooseData: {},
+                showData: {},
+                vcOperLevel: this.$store.state.user.userRefer.sysUser.vcOperLevel,
+            }
+        },
+        methods: {
+            selection(val) {
+                this.chooseData = [];
+                val.forEach((row, index) => {
+                    if (index === val.length - 1) return;
+                    this.$refs.radioTable.toggleRowSelection(row, false);
+                })
+                this.chooseData = val[0];
+                this.showData = this.chooseData;
+                // console.log(this.showData)
+                //  this.showAccoData = Object.assign({},this.chooseData) ;
+            },
+            // selection(row) {
+            //     this.bankData.forEach(item => {
+            //         // 排他,每次选择时把其他选项都清除
+            //         if (item.netno !== row.netno) {
+            //             item.checked = false;
+            //         }
+            //     })
+            // },
+            addList() {
+                this.showData={};
+                this.titleName="添加账户";
+                this.$refs.adddialog.showDialog();
+            },
+            editList() {
+                if (this.showData== undefined) return this.$message('您尚未做出选择');
+                var arr = Object.keys(this. showData) ,postData = {};
+                postData = Object.assign({},this. showData) ;
+                if (arr.length == 0) return this.$message('您尚未做出选择');
+                this.isEdit = 0 ;
+                this.isAdd = 1 ;
+                // console.log(this.isEdit)
+                this.titleName = '编辑账户' ;
+                this.$refs.adddialog.showDialogX();
+                
+            },
+            deleteList() {
+
+                if (this.showData== undefined) return this.$message('请选择要删除的元素');
+                var arr = Object.keys(this.showData) ,postData = {};
+                postData = Object.assign({},this. showData) ;
+                if(arr.length == 0) return this.$message('请选择要删除的元素') ;
+                // console.log(postData)
+                if(postData.cValidflag=="0") {
+                    this.getBankDate();
+                    return this.$message("未失效的配置，不能被删除")
+                    }
+                this.$confirm('确定删除该元素吗?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(()=>{
+                    api.fetchPost('netsilverconfdelete',postData).then((res)=>{
+                        this.$message({type: 'success', message: '删除成功!'});
+                        this.getBankDate() ;
+                    })
+
+                }).catch(()=>{
+                    this.getBankDate() ;
+                })
+            },
+            loadList() {
+                this.getBankDate();
+            },
+            getBankDate() {
+                    this.isEdit = 1 ;
+                    this.isAdd =  0;
+                api.fetchPost('netsilverconf').then((res)=>{
+                    // console.log(res);
+                    this.bankData=res;
+                }).catch((err)=>{
+                    console.log(err)
+                })
+                
+            },
+        },
+        watch: {
+
+        },
+        computed: {
+
+        },
+        updated() {
+            
+        },
+        mounted() {
+            this.getBankDate();
+        },
+        
+    }
+</script>
+
+<style lang="scss">
+    .import_config {
+        .table-list {
+            margin-top: 30px;
+
+            thead {
+                tr:first-child {
+                    th .el-checkbox__input {
+                        display: none;
+                    }
+                }
+            }
+        }
+    }
+</style>
