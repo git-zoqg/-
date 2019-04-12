@@ -1,1 +1,224 @@
-adsfd
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        span{
+            border:1px solid #090;
+        }
+        div{
+        	width:20vw;
+        	height: 15vh;
+            display:none;
+            border:1px solid #090;
+        }
+        .one{
+        	background: #090;
+        }
+        .two{
+        	color: blue;
+        }
+    </style>
+    
+</head>
+<body>
+    <span>tab1</span>
+    <span>tab2</span>
+    <span>tab3</span>
+    <div class="one two">content1</div>
+    <div>content2</div>
+    <div>content3</div>
+</body>
+</html>
+<script>
+    var flag=0;
+    var spans=document.getElementsByTagName("span");
+    var divs=document.getElementsByTagName('div');
+    divs[flag].style.display="block";
+    for(var i=0;i<spans.length;i++){
+        console.log(i);
+        spans[i].index=i;		//添加子值index 使每个spans对应自己的下标    spans[0].index=0    spans[1].index=1  ......
+        spans[i].onclick=function(){
+	        for(var j=0;j<divs.length;j++){
+	        	divs[j].style.display="none";
+	        	divs[j].style
+	        };
+            // console.log(i);
+            flag=this.index;
+            divs[flag].style.display="block"
+            console.log(flag);
+        }
+        
+    }
+
+    let routes=[
+		{
+    		path:'/',
+			name:'home',
+	    	component:"asdf",
+	    	children:[
+	    		{
+	    			path:'one',
+	    			name:'one',
+	    			children:[
+	    				{
+	    					path:"one",
+	    					name:'one',
+	    					component:'123',
+	    				},
+	    				{
+	    					path:"two",
+	    					name:'two',
+	    					component:'123',
+	    				},
+	    				{
+	    					path:"three",
+	    					name:'three',
+	    					children:[
+			    				{
+			    					path:"one",
+			    					name:'one',
+			    					component:'asd',
+			    				},
+			    				{
+			    					path:"two",
+			    					name:'two',
+			    					component:'qwe',
+			    				},
+			    				{
+			    					path:"three",
+			    					name:'three',
+			    					component:'zxc',
+			    				}
+			    			]
+	    				}
+	    			]
+	    		},
+	    		{
+	    			path:'two',
+	    			name:'two',
+	    			children:[
+	    				{
+	    					path:"one",
+	    					name:'one',
+	    					component:'123',
+	    				},
+	    				{
+	    					path:"two",
+	    					name:'two',
+	    					component:'123',
+	    				},
+	    				{
+	    					path:"three",
+	    					name:'three',
+	    					component:'123',
+	    				}
+	    			]
+	    		}
+	    	]
+    	}
+	];
+	    
+    function asd(routes,a){
+    	if(!a) a="";
+    	if(routes!=undefined){
+    		routes.map((item)=>{
+    			if(item.component!=undefined){
+    			console.log(a+item.path,'===',item.name,'===',item.component,);
+    			}
+    			if(item.children!=undefined){
+	    				// console.log(item.path,'===',item.name,'===',item.component);
+	    				// if(item.children!=undefined){
+	    				// 	item.children.map((item)=>{
+	    				// 		console.log(item.path,'===',item.name,'===',item.component);
+	    				// 	})
+	    				// };
+	    				// debugger;
+	    				// console.log(item.path)
+	    				// a=item.path+"/";	
+	    				// a+=item.path+"/"
+	    				// if(item.path=="/"){
+	    				// 	a+=item.path
+	    				// }else{
+	    					// a+=item.path+"/"	
+	    				// };
+	    				asd(item.children,a)
+	    		}
+    		})
+    		
+    	}
+    }
+
+    asd(routes)
+    
+</script>
+
+
+
+
+import React, { Component } from 'react';
+import { Breadcrumb, Switch, Icon } from 'antd';
+import { Link } from 'react-router-dom';
+import PropTypes from "prop-types";
+//具体导航的名称
+const breadcrumbNameMap = {
+    '/App': '首页',
+    '/App/home': 'home页面',
+    '/App/foo': 'foo页面',
+    '/App/bar': 'bar页面',
+};
+class BreadcrumbCustom extends Component {
+    //利用PropTypes记住所跳转每个页面的位置 
+    static contextTypes = {
+        router: PropTypes.object
+    }
+    constructor(props, context) {
+        super(props, context);
+        this.state = {
+            pathSnippets: null,
+            extraBreadcrumbItems: null
+        }
+    }
+    getPath() {
+	//对路径进行切分，存放到this.state.pathSnippets中
+        this.state.pathSnippets = this.context.router.history.location.pathname.split('/').filter(i => i);
+	//将切分的路径读出来，形成面包屑，存放到this.state.extraBreadcrumbItems
+        this.state.extraBreadcrumbItems = this.state.pathSnippets.map((_, index) => {
+            const url = `/${this.state.pathSnippets.slice(0, index + 1).join('/')}`;
+            console.log('url')
+            console.log(url)
+            return (
+                <Breadcrumb.Item key={url}>
+                    <Link to={url}>
+                        {breadcrumbNameMap[url]}
+                    </Link>
+                </Breadcrumb.Item>
+            );
+        });
+    }
+ 
+    componentWillMount() {
+	//首次加载的时候调用，形成面包屑
+        this.getPath();
+    }
+    componentWillReceiveProps(){
+	//任何子页面发生改变，均可调用，完成路径切分以及形成面包屑
+        this.getPath();
+    }
+    render() {
+        return (
+ 
+            <span>
+                <Breadcrumb style={{ margin: '12px 0' }}>
+		     //将形成的面包屑引用进来，即可完成如图所示的动画效果
+                    {this.state.extraBreadcrumbItems}
+                </Breadcrumb> 
+            </span>
+        )
+    }
+}
+
+export default BreadcrumbCustom;
