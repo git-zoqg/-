@@ -1,0 +1,1149 @@
+<template>
+    <div>
+        <list_title class="bottom-gray padding_15" title_name="网银流水" v-if="nextCustomInfo==1">
+
+            <!-- 查询 -->
+            <el-form :inline="true" :model="formInline" class="demo-form-inline" style="paddingTop:20px">
+
+
+
+                <el-form-item label="开始日期">
+                    <el-date-picker class="el-time-width" v-model="formInline.beginDate" type="datetime" placeholder="选择日期时间">
+                    </el-date-picker>
+                </el-form-item>
+
+                <el-form-item label="结束日期">
+                    <el-date-picker class="el-time-width" v-model="formInline.endDate" type="datetime" placeholder="选择日期时间">
+                    </el-date-picker>
+                </el-form-item>
+
+
+                <el-form-item label="账户名称">
+                    <el-select v-model="formInline.cAcconame" placeholder="请选择" clearable>
+                        <el-option v-for="( item, index ) in queryCondition.listForAcco" :label='item.acconame' :value='item.accoid'
+                            :key='index'></el-option>
+                    </el-select>
+                </el-form-item>
+
+                <el-form-item label="付款银行账号">
+                    <el-input clearable v-model="formInline.vcOtherbankacco" placeholder="请输入"></el-input>
+                </el-form-item>
+
+                <el-form-item label="流水状态">
+                    <el-select v-model="formInline.cState" multiple style="width:280px" filterable allow-create
+                        placeholder="请选择">
+                        <el-option v-for="(item, index) in queryCondition.listForState" :label="item.c_statename"
+                            :value="item.c_state" :key="index"></el-option>
+                    </el-select>
+                </el-form-item>
+                <div class="right">
+                    <el-form-item>
+                        <el-button type="primary" @click="onSubmit">查询</el-button>
+                    </el-form-item>
+                </div>
+            </el-form>
+
+            <!-- table -->
+            <el-table :data="dataList" ref="multipleTable" style="width: 100%" :row-class-name="tableRowClassName"
+                @selection-change="handleSelectionChange">
+                <el-table-column type="selection" width="50">
+                </el-table-column>
+
+                <el-table-column type="expand" width="25">
+                    <!-- 子表格 -->
+                    <template scope="props">
+                        <el-table class="children_table" :data="props.row.data" tooltip-effect="dark" style="width: 100%;fontSize:14px"
+                            :row-class-name="chd_tableRowClassName" @selection-change="chd_handleSelectionChange">
+                            <el-table-column type="selection" width="53">
+                            </el-table-column>
+                            <el-table-column prop="VC_REQUESTNO" label="申请单号" width="220">
+                            </el-table-column>
+                            <el-table-column prop="VC_TRADEACCO" label="交易账号" width="220">
+                            </el-table-column>
+                            <el-table-column prop="EN_OCCURBALA" label="申请金额" width="150">
+                            </el-table-column>
+                            <el-table-column prop="VC_REQUESTDATE" label="申请日期" width="150">
+                            </el-table-column>
+                            <el-table-column prop="VC_REQUESTTIME" label="申请时间" width="150">
+                            </el-table-column>
+                            <el-table-column prop="VC_REQUESTBANKACCO" label="银行账号" width="220">
+                            </el-table-column>
+                            <el-table-column prop="VC_REQUESTBANKNAME" label="银行户名" width="150">
+                            </el-table-column>
+                            <el-table-column prop="C_BUSINFLAG" label="交易类型" width="150">
+                            </el-table-column>
+                            <el-table-column prop="VC_FUNDCODE" label="基金代码" width="150">
+                            </el-table-column>
+
+                        </el-table>
+
+                        <div class="buttons">
+                            <el-button type="primary" @click="gLian" size="small" style="width:80px" :disabled=true>{{button}}</el-button>
+                            <el-button type="primary" @click="cRu" size="small" style="width:80px" :disabled="props.row.cState == 1 || props.row.cState == 3 || vcOperLevel.indexOf('1')<0">存入</el-button>
+                            <el-button type="primary" @click="wRu" size="small" style="width:80px" :disabled="props.row.cState == 2 || props.row.cState == 1 || props.row.cState == 3 || vcOperLevel.indexOf('1')<0">未开户存入</el-button>
+                            <el-button type="danger" @click="tKuan" size="small" style="width:80px" :disabled=true>退款</el-button>
+                            <!-- 20190222 -->
+                        </div>
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="vcSerialno" label="流水号" width="190">
+                </el-table-column>
+                <el-table-column prop="vcAcconame" label="账户名称" width="110">
+                </el-table-column>
+                <el-table-column prop="vcDate" label="流水日期" width="140">
+                    <template scope="scope">{{dateTransf(scope.row.vcDate)}}</template>
+                </el-table-column>
+                <el-table-column prop="vcTime" label="流水时间" width="100">
+                    <template scope="scope">{{timeTransf(scope.row.vcTime)}}</template>
+                </el-table-column>
+                <el-table-column prop="vcOtherbankname" label="付款方开户银行" width="150">
+                </el-table-column>
+                <el-table-column prop="vcOtherbankacco" label="付款方银行账号" width="150">
+                </el-table-column>
+                <el-table-column prop="vcOthernameinbank" label="付款方户名" width="150">
+                </el-table-column>
+                <el-table-column prop="enAmt" label="金额" width="150">
+                    <!-- <span>{{formatCurrency(props.row.enAmt)  }}</span> -->
+                    <template scope="socpe">{{socpe.row.enAmt | Currency}}</template>
+                </el-table-column>
+                <el-table-column prop="cStateName" label="流水状态" width="150">
+                </el-table-column>
+                <el-table-column prop="vcBackcurrentserialno" label="退款流水" width="150">
+                </el-table-column>
+                <el-table-column prop="vcInfterinfo" label="备注" width="150" show-overflow-tooltip>
+                </el-table-column>
+
+            </el-table>
+
+            <!-- 分页 -->
+            <!-- <div class="right">
+            <div class=" padding_15_0 text-right ">
+                <el-pagination
+                    :page-size="pageSize" 
+                    layout="total, prev, pager, next"
+                    :total="dataList.length">
+                </el-pagination>
+            </div>
+
+        </div> -->
+
+            <el-button type="primary" class="buttonTop" @click="Batch" :disabled="this.$store.state.user.userRefer.sysUser.vcOperLevel.indexOf('1')<0">批量存入</el-button>
+            <div class="bottm">
+                <div class="div_left">
+                    <span>已选总条数: {{lengthMethod}} 条</span>
+                </div>
+                <div>
+                    <span>已选总金额: {{sumEnAmtMethod | Currency}} 元</span>
+                </div>
+            </div>
+        </list_title>
+
+        <!-- 转账确认信息页面 -->
+        <div class="only-read-info" v-if="nextCustomInfo==2">
+            <list_title class="bottom-gray bottom_none padding_15_0" title_name="转账确认信息"></list_title>
+            <div class="border-line-two"></div>
+            <list_title class="bottom-gray bottom_none padding_15_0" title_name="收款方信息">
+                <div class="take-account">
+                    <!-- <p>账户ID <span><i class="douStyleopenid">:</i></span><span class="font_14">--</span>
+                    </p> -->
+                    <p>账号<span><i class="douStyle">:</i></span><span class="font_14">{{multipleSelection[0].vcOtherbankacco}}</span>
+                    </p>
+                    <p>户名<span><i class="douStyle">:</i></span><span class="font_14">{{multipleSelection[0].vcOthernameinbank}}</span>
+                    </p>
+                    <p>银行编号<span><i class="douStyleopen">:</i></span>
+                        <el-select v-model="cKeyvalue" placeholder="请选择" class='size'>
+                            <el-option v-for="item in bankNo" :value="item.cKeyvalue + ''" :key="item.enUserId">
+                            </el-option>
+                        </el-select>
+                    </p>
+                    <p>银行名称<span><i class="douStyleopen">:</i></span>
+
+                        <span class="font_14">
+                            <el-input clearable v-model="bankName" style="display: inline" placeholder="请输入" class='size'></el-input>
+                        </span>
+                    </p>
+                    <!-- <p>金额<span><i class="douStyle">:</i></span><span class="font_14">{{multipleSelection[0].enAmt}}</span>
+                    </p>
+                    <p>日期<span><i class="douStyle">:</i></span><span class="font_14">{{new Date().toLocaleDateString().replace(/\//g,'.')}}</span>
+                    </p> -->
+                    <p>CNPAS<span><i class="douStylecnaps">:</i></span><span class="font_14">{{tKuanData.othercnapsno}}</span>
+                    </p>
+                    <p>客户类型<span><i class="douStyleopen">:</i></span>
+                        <el-select v-model="rcvCustType" placeholder="请选择" class='size'>
+                            <el-option value="1" label="1-个人"></el-option>
+                            <el-option value="0" label="0-机构"></el-option>
+                        </el-select>
+                    </p>
+                </div>
+
+                <div class="border-line-two"></div>
+                <list_title class="bottom-gray bottom_none padding_15_0" title_name="付款方信息"></list_title>
+                <div class="pay-account">
+                    <p>账户ID <span><i class="douStyleopenid">:</i></span><span class="font_14">{{multipleSelection[0].cAccoid}}</span>
+                    </p>
+                    <p>账号<span><i class="douStyle">:</i></span><span class="font_14">{{multipleSelection[0].vcBankacco}}</span>
+                    </p>
+                    <p>户名<span><i class="douStyle">:</i></span><span class="font_14">{{multipleSelection[0].vcAcconame}}</span>
+                    </p>
+                    <p>银行编号<span><i class="douStyleopen">:</i></span><span class="font_14">{{tKuanData.vcBankno}}</span>
+                    </p>
+                    <p>CNPAS<span><i class="douStylecnaps">:</i></span><span class="font_14">{{tKuanData.vcCnapsno}}</span>
+                    </p>
+                    <p>联行号<span><i class="douStylelian">:</i></span><span class="font_14">{{tKuanData.vcBranchbank}}</span>
+                    </p>
+                    <p>退款金额<span><i class="douStyleopen">:</i></span>
+                        <span class="font_14">
+                            <el-input-number v-model="enAmt" placeholder="请输入" class='size' :max="multipleSelection[0].enAmt"></el-input-number>
+                        </span>
+                    </p>
+                    <p>退款日期<span><i class="douStyleopen">:</i></span><span class="font_14">{{new
+                            Date().toLocaleDateString().replace(/\//g,'.')}}</span>
+                    </p>
+                    <!-- <p>客户类型<span><i class="douStyleopen">:</i></span><span class="font_14">机构</span>
+                    </p> -->
+                </div>
+            </list_title>
+            <div class="back-step">
+                <el-button class="back-step-button" type="primary" @click="qxioa">取消</el-button>
+                <el-button @click="customIsYes" class="query-step-button" type="primary">确定</el-button>
+            </div>
+        </div>
+
+        <!-- 柜台退款申请 -->
+        <div id="ajust-application" class="padding_15 gray-bg ajust-custom" v-if="nextCustomInfo==3">
+            <div class="content white_bg padding_15">
+                <p class="text-center ">柜台退款申请</p>
+                <list_title class="padding_10_0 border-bottom-blue" title_name="基本数据"></list_title>
+                <!--基本数据-->
+                <div class="basic-data">
+                    <table class="custom_Table" style="width: 100%;" border="1" cellspacing="0">
+                        <thead>
+                            <th>转账信息</th>
+                            <th>账户ID</th>
+                            <th>账号</th>
+                            <th>户名</th>
+                            <th>金额(元)</th>
+                            <th>日期</th>
+                            <th>CNAPS号</th>
+                            <th>联行号</th>
+                            <th>银行编号</th>
+                            <!-- <th>银行名称</th> -->
+                            <th>客户类型 </th>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>付款方</td>
+                                <td>{{multipleSelection[0].cAccoid || '--'}}</td>
+                                <td>{{multipleSelection[0].vcBankacco || '--'}}</td>
+                                <td>{{multipleSelection[0].vcAcconame || '--'}}</td>
+                                <td>{{multipleSelection[0].enAmt || '--'}}</td>
+                                <td>{{new Date().toLocaleDateString().replace(/\//g,'.') || '--'}}</td>
+                                <td>{{tKuanData.vcCnapsno || '--'}}</td>
+                                <td>{{tKuanData.vcBranchbank || '--'}}</td>
+                                <td>{{tKuanData.vcBankno || '--'}}</td>
+                                <!-- <td>{{tKuanData.vcBankno}}</td> -->
+                                <td>机构</td>
+                            </tr>
+                            <tr>
+                                <td>收款方</td>
+                                <td>--</td>
+                                <td>{{multipleSelection[0].vcOtherbankacco || '--'}}</td>
+                                <td>{{multipleSelection[0].vcOthernameinbank || '--'}}</td>
+                                <td>{{multipleSelection[0].enAmt || '--'}}</td>
+                                <td>{{new Date().toLocaleDateString().replace(/\//g,'.') || '--'}}</td>
+                                <td>{{tKuanData.othercnapsno || '--'}}</td>
+                                <td>--</td>
+                                <td>{{multipleSelection[0].vcOtherbankno || '--'}}</td>
+                                <!-- <td>transferData.basicBankName</td> -->
+                                <td>{{rcvCustType==1?'个人':'机构' || '--'}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <list_title class="padding_10_0 border-bottom-blue" title_name="修改原因"></list_title>
+                <el-form :model="reasonFrom" label-width="80px" class="top_30 reasonFrom" label-position="left">
+                    <el-form-item label="标题:">
+                        <el-input v-model="reasonFrom.vcTitle" style="width:400px"></el-input>
+                    </el-form-item>
+                    <el-form-item label="详情:" class="">
+                        <el-input type="textarea" v-model="reasonFrom.vcContent" style="width:400px" :rows="8"
+                            placeholder="请输入备注"></el-input>
+                    </el-form-item>
+                </el-form>
+                <list_title class="padding_10_0 border-bottom-blue" title_name="审批人员"></list_title>
+                <el-form :model="nodeInfo" label-width="80px" class="top_30" label-position="left">
+
+                    <el-form-item :label=checkName.shenHe1>
+                        <el-select v-model="nodeInfo.node10" placeholder="请选择">
+                            <el-option v-for="item in nodeInfolist" :label="item.vcUserName" :value="item.enUserId + ''"
+                                :key="item.enUserId">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                    <!-- <el-form-item :label=checkName.shenHe2 v-if="isShow">
+                    <el-select v-model="nodeInfo.node2" placeholder="请选择">
+                        <el-option v-for="item in nodeInfolist" :label="item.vcUserName"
+                                   :value="item.enUserId + ''" :key="item.enUserId">
+                        </el-option>
+                    </el-select>
+                </el-form-item> -->
+                </el-form>
+                <div class="button_group top_30 ">
+                    <el-button @click="handleCancel">放弃修改</el-button>
+                    <el-button class="blue-bg-white-color-btn font-color" type="primary" @click="handleCommit"
+                        :disabled="isPosting">
+                        提 交
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</template>
+
+<script>
+    import list_title from '../common/list-title.vue'
+    import api from '../../http/api';
+    import {
+        dateToString,
+        formatCurrency
+    } from '../../assets/js/filters'
+    import {
+        formatDateTime
+    } from '../../assets/js/util'
+
+    export default {
+        components: {
+            list_title,
+            api,
+        },
+        data() {
+            return {
+                formInline: { //查询表单项数据
+                    beginDate: '',
+                    endDate: '',
+                    cAcconame: '',
+                    vcOtherbankacco: '',
+                    cState: ['0', '2'],
+
+                },
+
+
+                dataList: [], //查询接口接受数据
+                tKuanData: [], //退款接口接受数据
+                bankNo: [],
+                transferData: [], //退款确认接口接受数据
+                queryCondition: '', //账户名称接口数据
+                pageSize: 10,
+                currentPage: '1',
+                multipleSelection: [],
+                chd_multipleSelection: [],
+
+                nextCustomInfo: 1, //1显示表格  2显示退款页面 3显示客户汇款申请
+                HKInfoFrom: {},
+                rcvCustType: '',
+                cKeyvalue: '',
+                bankName: '',
+                enAmt: '',
+
+                //柜台退款申请数据
+                reasonFrom: {
+                    vcTitle: '柜台退款申请',
+                    vcContent: '',
+                },
+                nodeInfo: {
+                    node10: '',
+                    // node2:'',
+                },
+                nodeInfolist: [],
+                checkName: {
+                    shenHe2: '二级审核',
+                    shenHe1: '一级审核',
+                },
+                isShow: true,
+                isPosting: false,
+
+                // 尝试
+                flag1: 0,
+                flag2: 0,
+                button: '关联',
+                vcOperLevel: this.$store.state.user.userRefer.sysUser.vcOperLevel
+            }
+
+        },
+        methods: {
+
+            dateTransf(date) {
+                const year = date.substring(0, 4);
+                const month = date.substring(4, 6);
+                const day = date.substring(6, 8);
+                return year+'-'+month+'-'+day
+            },
+            timeTransf(date) {
+                const hh = date.substring(0, 2);
+                const mm = date.substring(2, 4);
+                const ss = date.substring(4, 6);
+                return hh+':'+mm+':'+ss
+            },
+
+            handleSelectionChange(val) {
+                this.multipleSelection = val;
+                // console.log(val.length)
+            },
+            chd_handleSelectionChange(val) {
+                this.chd_multipleSelection = val;
+            },
+            tableRowClassName(row, rowIndex) {
+
+                let ys = [];
+                if (row.cIsOneAcco == 1) {
+                    ys.push('row-expand-cover')
+                };
+                if (row.cMatch == '1') {
+                    ys.push('success-row')
+                };
+                return ys.join(' ');
+
+            },
+            chd_tableRowClassName(row, rowIndex) {
+
+                if (row.c_ismatched == '1') {
+                    return 'success-row'
+                }
+
+            },
+
+            // 查询下拉框接口
+            query() {
+                api.fetchPost('queryCondition').then((res) => {
+                    this.queryCondition = res;
+                    // console.log(res);
+                }).catch((err) => {
+                    console.log(err);
+                })
+            },
+
+            // 查询
+            onSubmit() {
+                let _this = this;
+                let cstate = _this.formInline.cState.toString().replace(/,/g, '|');
+
+                let postData = {
+
+                    pageSize: _this.pageSize,
+                    pageNum: _this.currentPage,
+                    vcStartDate: _this.formInline.beginDate ? formatDateTime(_this.formInline.beginDate) : '',
+                    vcEndDate: _this.formInline.endDate ? formatDateTime(_this.formInline.endDate) : '',
+                    cAcconame: _this.formInline.cAcconame,
+                    vcOtherbankacco: _this.formInline.vcOtherbankacco,
+                    cState: _this.formInline.cState.length != 0 ? cstate : '0|2',
+                };
+                // console.log(postData);
+                api.fetchPost('bankcurrentlist', postData).then((res) => {
+                    this.dataList = res;
+                    // console.log(this.dataList);
+                    console.log(postData);
+
+                }).catch((err) => {
+                    console.info(err);
+                    console.log(postData);
+                });
+
+            },
+
+            // 关联
+            gLian() {
+                let _this = this;
+                // 多个值中间以 | 连接
+                let postData = [];
+                let vcSerialnos = '';
+                let vcRequestnos = '';
+                for (let i = 0; i < _this.multipleSelection.length; i++) {
+                    vcSerialnos += this.multipleSelection[i].vcSerialno + '|';
+                    // vcRequestnos += this.chd_multipleSelection[i].VC_REQUESTNO + '|'  错误代码
+                };
+                for (let i = 0; i < _this.chd_multipleSelection.length; i++) {
+                    vcRequestnos += this.chd_multipleSelection[i].VC_REQUESTNO + '|'
+                };
+                if (_this.chd_multipleSelection.length != 0 && _this.multipleSelection.length != 0) {
+                    postData = {
+                        vcSerialnos: _this.multipleSelection.length > 1 ? vcSerialnos.substr(0, vcSerialnos.length -
+                            1) : this.multipleSelection[0].vcSerialno,
+                        vcRequestnos: _this.chd_multipleSelection.length > 1 ? vcRequestnos.substr(0, vcRequestnos.length -
+                            1) : this.chd_multipleSelection[0].VC_REQUESTNO,
+                    };
+                } else {
+                    postData = [];
+                }
+
+                // 为空阻止提交
+                if (!postData) {
+                    return this.$message({
+                        type: 'info',
+                        message: '未选择任何数据'
+                    });
+                } else {
+                    if (!postData.vcSerialnos) {
+                        return this.$message({
+                            type: 'info',
+                            message: '未选择任何数据'
+                        });
+                    }
+                }
+
+                if (this.button == "关联") {
+                    api.fetchPost('gLian', postData).then((res) => {
+                        // console.log(postData);
+                        this.$message({
+                            type: 'success',
+                            message: '关联成功'
+                        });
+                        setTimeout(function () {
+                            _this.onSubmit()
+                        }, 300);
+                        // console.log(res); 
+                    }).catch((err) => {
+                        console.info(err);
+                        console.log(postData);
+                    })
+                } else {
+                    api.fetchPost('cancelGLian', postData).then((res) => {
+                        // console.log(postData);
+                        this.$message({
+                            type: 'success',
+                            message: '取消关联成功'
+                        });
+                        setTimeout(function () {
+                            _this.onSubmit()
+                        }, 300);
+                        // console.log(res); 
+                    }).catch((err) => {
+                        console.info(err);
+                        // console.log(postData);
+                    })
+                }
+
+
+
+            },
+
+            // 存入
+            cRu() {
+                let _this = this;
+                let postData = [];
+                let vcSerialnos = '';
+
+                for (let i = 0; i < _this.multipleSelection.length; i++) {
+                    vcSerialnos += this.multipleSelection[i].vcSerialno + '|'
+                };
+                if (_this.multipleSelection.length != 0) {
+                    postData = {
+                        vcSerialnos: _this.multipleSelection.length > 1 ? vcSerialnos.substr(0, vcSerialnos.length -
+                            1) : this.multipleSelection[0].vcSerialno,
+
+                    };
+                } else {
+                    postData = [];
+                }
+
+                // 为空阻止提交
+                if (!postData) {
+                    return this.$message({
+                        type: 'info',
+                        message: '未选择任何数据'
+                    });
+                } else {
+                    if (!postData.vcSerialnos) {
+                        return this.$message({
+                            type: 'info',
+                            message: '未选择任何数据'
+                        });
+                    }
+                };
+
+                api.fetchPost('cRu', postData).then((res) => {
+                    //console.log(postData);
+                    // console.log(res);
+                    this.$message({
+                        type: 'success',
+                        message: '存入成功!'
+                    });
+                    this.onSubmit()
+                }).catch((err) => {
+                    console.info(err);
+                    // console.log(postData);
+                })
+            },
+
+            // 未开户存入
+            wRu() {
+                let _this = this;
+                let postData = [];
+                let vcSerialnos = '';
+
+                for (let i = 0; i < _this.multipleSelection.length; i++) {
+                    vcSerialnos += this.multipleSelection[i].vcSerialno + '|'
+                };
+                if (_this.multipleSelection.length != 0) {
+                    postData = {
+                        vcSerialno: _this.multipleSelection.length > 1 ? vcSerialnos.substr(0, vcSerialnos.length -
+                            1) : this.multipleSelection[0].vcSerialno,
+
+                    };
+                } else {
+                    postData = [];
+                }
+
+                // 为空阻止提交
+                if (!postData) {
+                    return this.$message({
+                        type: 'info',
+                        message: '未选择任何数据'
+                    });
+                } else {
+                    if (!postData.vcSerialno) {
+                        return this.$message({
+                            type: 'info',
+                            message: '未选择任何数据'
+                        });
+                    }
+                };
+
+                api.fetchPost('wRu', postData).then((res) => {
+
+                    // console.log(postData);
+                    // console.log(res);
+                    this.$message({
+                        type: 'success',
+                        message: '操作成功!'
+                    });
+                    this.onSubmit()
+                }).catch((err) => {
+                    console.info(err);
+                    // console.log(postData);
+                })
+            },
+
+            qxioa() {
+                this.nextCustomInfo = 1;
+            },
+            //退款确认
+            customIsYes() {
+
+                if (this.rcvCustType.length == 0) return this.$message({
+                    type: "info",
+                    message: '客户类型为空'
+                });
+                if (!this.cKeyvalue) return this.$message({
+                    message: '银行编号为空',
+                    type: 'info'
+                });
+                if (!this.bankName) return this.$message({
+                    message: '银行名称为空',
+                    type: 'info'
+                });
+
+                let postData = this.multipleSelection[0].vcSerialno;
+
+                api.fetchPost('actionInfo', postData).then((res) => {
+                    this.transferData = res.actNodefList;
+                    this.nodeInfolist = res.actNodefList[0].userList;
+                    // console.log(postData);
+                    console.log(this.transferData);
+
+                }).catch((err) => {
+                    console.info(err);
+                    // console.log(postData);
+                })
+
+                this.nextCustomInfo = 3;
+            },
+
+            // 退款
+            tKuan() {
+                let _this = this;
+                let postData = [];
+                let vcSerialno = '';
+
+                // console.log(_this.multipleSelection)
+                for (let i = 0; i < _this.multipleSelection.length; i++) {
+                    vcSerialno += this.multipleSelection[i].vcSerialno + '|'
+                };
+                if (_this.multipleSelection.length != 0) {
+                    postData = {
+                        vcSerialno: _this.multipleSelection.length > 1 ? vcSerialno.substr(0, vcSerialno.length - 1) :
+                            this.multipleSelection[0].vcSerialno,
+
+                    };
+                } else {
+                    postData = [];
+                }
+
+                // 为空阻止提交
+                if (!postData) {
+                    return this.$message({
+                        type: 'info',
+                        message: '未选择任何数据'
+                    });
+                } else {
+                    if (!postData.vcSerialno) {
+                        return this.$message({
+                            type: 'info',
+                            message: '未选择任何数据'
+                        });
+                    }
+                };
+
+
+                api.fetchPost('tKuan', postData).then((res) => {
+
+                    // console.log(postData);
+                    console.log(res);
+                    this.tKuanData = res;
+                    this.nextCustomInfo = 2; //显示退款页
+
+                }).catch((err) => {
+
+                    console.info(err);
+                    // console.log(postData);
+
+                })
+
+                api.fetchPost('getBankList').then((res) => {
+
+                    // console.log(res);
+                    this.bankNo = res;
+
+                }).catch((err) => {
+
+                    console.info(err);
+
+                })
+
+            },
+
+            // 批量存入
+            Batch() {
+                let _this = this;
+                let postData = [];
+                let vcSerialnos = '';
+
+                for (let i = 0; i < _this.multipleSelection.length; i++) {
+                    vcSerialnos += this.multipleSelection[i].vcSerialno + '|'
+                };
+                if (_this.multipleSelection.length != 0) {
+                    postData = {
+                        vcSerialnos: _this.multipleSelection.length > 1 ? vcSerialnos.substr(0, vcSerialnos.length -
+                            1) : this.multipleSelection[0].vcSerialno,
+
+                    };
+                } else {
+                    postData = [];
+                }
+
+                // 为空阻止提交
+                if (!postData) {
+                    return this.$message({
+                        type: 'info',
+                        message: '未选择任何数据'
+                    });
+                } else {
+                    if (!postData.vcSerialnos) {
+                        return this.$message({
+                            type: 'info',
+                            message: '未选择任何数据'
+                        });
+                    }
+                };
+
+                api.fetchPost('cRu', postData).then((res) => {
+                    // console.log(postData);
+                    // console.log(res);
+                    this.$message({
+                        type: 'success',
+                        message: '操作成功!'
+                    });
+                    setTimeout(this.onSubmit, 300)
+
+                }).catch((err) => {
+                    console.info(err);
+                    // console.log(postData);
+                })
+            },
+
+            // 放弃修改
+            handleCancel() {
+                this.nextCustomInfo = 1;
+            },
+
+            // 提交
+            handleCommit() {
+
+                let _this = this;
+
+                // this.customTime =  dateToString(this.transferData.dateHK).dateStr;
+                var postData = {
+
+                    payAccoID: this.multipleSelection[0].cAccoid, //付款方Id
+                    payBankAcco: this.multipleSelection[0].vcBankacco, //账号
+                    payAmt: this.multipleSelection[0].enAmt, //金额
+                    payDate: dateToString(new Date()).dateStr, //日期
+                    rcvBankAcco: this.multipleSelection[0].vcOtherbankacco, //收款方账号
+                    rcvAccoName: this.multipleSelection[0].vcOthernameinbank, // 户名
+                    rcvBankName: this.multipleSelection[0].vcOtherbankname, //收款银行名称
+                    rcvBankNo: this.multipleSelection[0].vcOtherbankno, //收款银行编号
+                    rcvCnapsNo: this.tKuanData.othercnapsno, //收款CNAPS号
+                    rcvBranchBank: '', //收款联行号
+                    rcvCustType: this.rcvCustType, //收款客户类型
+                    enBusidataId: this.multipleSelection[0].vcSerialno, //资金流水号
+                    vcTitle: this.reasonFrom.vcTitle, //title
+                    vcContent: this.reasonFrom.vcContent, //content
+                    nodeInfo: JSON.stringify(this.nodeInfo), //审核人
+
+                };
+
+                // postData = Object.assign(postData, _this.reasonFrom);
+                // postData.nodeInfo = JSON.stringify(_this.nodeInfo);  ？2018.12.13
+                // postData.enBusidataId = _this.ajustForm.vcFundserialno;
+
+                // postData.enBusidataId = this.transferData.orgWaterNum;
+                // postData.enBusidataId = "DBWT";
+                // if (_this.canModifyData.cState != _this.ajustForm.cState) {
+                //     // console.log( _this.ajustForm.cState)
+                //     postData.cState = _this.ajustForm.cState
+                //     console.log(_this.ajustForm.cState)
+                // };
+                // if (_this.canModifyData.vcNeeddate != _this.ajustForm.vcNeeddate) {
+                //     postData.vcNeeddate = dateToString(_this.ajustForm.vcNeeddate).dateStr
+                // }
+                // console.log(postData);
+
+                //提示审核员为空
+                if (!this.nodeInfo.node10) return this.$message({
+                    message: '审核员为空',
+                    type: 'info'
+                });
+
+                api.fetchPost('actSubmit', postData).then(function (resolve) {
+
+                    _this.$message({
+                        message: '申请提交成功!',
+                        type: 'success',
+                        duration: 5000
+                    });
+                    _this.multipleSelection = '';
+                    _this.enAmt = 0;
+                    _this.cKeyvalue = '';
+                    _this.bankName = '';
+                    _this.cKeyvalue = '';
+                    _this.rcvCustType = '';
+                    _this.reasonFrom.vcContent = '';
+                    _this.nodeInfo.node10 = '';
+                    // _this.onSubmit();
+                    _this.handleCancel();
+
+                }, function (fail) {
+                    console.log(postData);
+                    console.log(fail);
+                }).finally(function () {
+                    // _this.isPosting = false;
+                })
+
+            }
+
+
+        },
+        computed: {
+
+            sumEnAmtMethod: function () {
+                let a = 0;
+                let sum = this.multipleSelection;
+                for (let i = 0; i < sum.length; i++) {
+                    a += sum[i].enAmt;
+                };
+                return a
+            },
+            lengthMethod: function () {
+                return this.multipleSelection.length;
+            }
+        },
+        mounted() {
+            this.onSubmit();
+            this.query();
+            setInterval(this.onSubmit, 300000)
+        },
+        watch: {
+
+            multipleSelection: function () {
+                // console.log(this.multipleSelection.length)
+                if (this.multipleSelection.length != 0) {
+                    if (this.multipleSelection[0].cMatch == 1) {
+                        this.flag1 = 1;
+                        console.log(this.flag1);
+                        if (this.flag1 + this.flag2 == 2) {
+                            this.button = '取消关联';
+                        } else {
+
+                            this.button = '关联';
+                        }
+                    }
+                } else {
+                    // alert("-_-")
+                    this.flag1 = 0;
+                    this.button = '关联';
+                }
+            },
+            chd_multipleSelection: {
+                handler: function () {
+                    if (this.chd_multipleSelection != 0) {
+                        if (this.chd_multipleSelection[0].c_ismatched == 1) {
+                            this.flag2 = 1;
+                            console.log(this.flag2);
+                            if (this.flag1 + this.flag2 == 2) {
+                                this.button = '取消关联';
+                            } else {
+
+                                this.button = '关联';
+                            }
+                        }
+                    } else {
+                        this.flag2 = 0;
+                        this.button = '关联';
+                    }
+                },
+            },
+
+
+        },
+
+    }
+</script>
+
+<style>
+    ul.el-pager li {
+        padding: 0px;
+        margin: 0px;
+        border-color: #d1dbe5;
+    }
+
+    .el-table__expanded-cell {
+        padding: 0px 0px 20px 50px;
+    }
+
+    .children_table thead .el-checkbox__inner {
+        display: none;
+    }
+
+    tr.success-row>td {
+        /* background: #d9f7e4 !important; */
+        color: #18ab4d;
+    }
+
+    .hide-children {
+        display: none;
+    }
+
+    .el-table .el-table__body tr:hover>td {
+        background: initial !important;
+    }
+
+    /* .el-icon-arrow-right:before {
+    content: "+";
+} */
+
+    .row-expand-cover td .el-table__expand-icon {
+        display: none;
+    }
+
+    /* 为空隐藏下拉按钮 */
+
+    .size .el-input__inner {
+        width: 100px;
+        height: auto !important;
+    }
+
+    .el-input-number__decrease,
+    .el-input-number__increase {
+        display: none;
+    }
+
+    .font_14 .el-input input {
+        padding: 3px 10px;
+    }
+</style>
+<style scoped>
+    .right {
+        float: right
+    }
+
+    .bottm {
+        float: right;
+        color: #889399;
+        margin-top: 20px;
+        width: 500px
+            /* margin-right:200px; */
+    }
+
+    .div_left {
+        width: 250px;
+        float: left;
+        /* margin-right:50px; */
+    }
+
+    .buttonTop {
+        margin-top: 15px;
+        /* margin-left:-260px */
+    }
+
+    .buttons {
+        float: left;
+        margin: 10px 0px 0px;
+    }
+
+    .el-time-width {
+        width: 210px;
+    }
+
+    /* 转账确认信息页面 */
+    .pay-account {
+        border: 1px solid RGB(217, 217, 217);
+        padding-left: 20px;
+    }
+
+    .pay-account>p,
+    .take-account>p {
+        margin: 10px 0px;
+    }
+
+    .douStyle,
+    .douStyleone,
+    .douStyletwo,
+    .douStylethree,
+    .douStylefore,
+    .douStylefive {
+        font-style: normal;
+        padding-right: 20px;
+
+    }
+
+    .douStyle {
+        padding-left: 30px;
+
+    }
+
+    .douStyleone {
+        padding-left: 47px;
+        padding-right: 20px
+    }
+
+    .douStyletwo {
+        padding-left: 63px;
+    }
+
+    .douStylethree,
+    .douStylefive {
+        padding-left: 63px;
+    }
+
+    .douStylefore {
+        padding-left: 36px;
+    }
+
+    .take-account {
+        border: 1px solid RGB(217, 217, 217);
+        margin-top: 10px;
+        padding-left: 20px;
+    }
+
+    .douStyle,
+    .douStyleopen,
+    .douStylelian,
+    .douStylecnaps,
+    .douStyleopenid {
+        font-style: normal;
+        padding-right: 20px;
+    }
+
+    .douStyle {
+        padding-left: 63px;
+
+    }
+
+    .douStyleopen {
+        padding-left: 31px;
+    }
+
+    .douStyleopenid {
+        padding-left: 41px;
+    }
+
+    .douStylelian {
+        padding-left: 47px;
+    }
+
+    .douStylecnaps {
+        padding-left: 42px;
+    }
+
+    .back-step {
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    .el-button {
+        width: 100px;
+    }
+
+
+    /* 客户汇款申请 */
+    th {
+        padding: 0;
+        height: 40px !important;
+    }
+
+    thead {
+        width: 100px;
+        background-color: RGB(244, 244, 244) !important;
+        font-size: 14px;
+        // vertical-align: middle;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    td {
+        min-width: 160px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding: 0;
+        text-align: center;
+        font-size: 16px;
+        margin: 5px 0px !important;
+        color: #889399;
+    }
+
+    tr {
+        height: 40px;
+
+
+    }
+
+    .custom_Table {
+
+        width: 100%;
+        border: 1px solid #bfcbd9;
+        border-collapse: collapse;
+        border-spacing: 0;
+        overflow: scroll;
+        box-sizing: border-box;
+    }
+
+    .basic-data {
+        width: 100%;
+        overflow-x: scroll;
+        word-break: keep-all;
+        margin-top: 20px;
+
+    }
+</style>
